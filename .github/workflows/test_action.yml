@@ -35,7 +35,7 @@ jobs:
 
       - name: Check Self-Hosted Runner Availability
         id: runner-check
-        uses: imShakil/check-runners-availability@v1.0.2
+        uses: imShakil/RunnerWatch@v1
         with:
           token: ${{ secrets.RUNNER_CHECK_PAT }}
           scope: repo
@@ -56,7 +56,7 @@ jobs:
     steps:
       - name: Check Self-Hosted Runner Availability (org)
         id: runner-check-org
-        uses: imShakil/check-runners-availability@v1.0.2
+        uses: imShakil/RunnerWatch@v1
         with:
           token: ${{ secrets.RUNNER_CHECK_PAT }}
           scope: org

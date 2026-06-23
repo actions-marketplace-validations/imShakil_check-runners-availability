@@ -1,5 +1,5 @@
-name: 'Check Self Hosted Runner Availability'
-description: 'A github action to check if self hosted runners online or offline to cancel workflow immediately.'
+name: 'RunnerWatch'
+description: 'RunnerWatch — Instantly detect available self-hosted runners and fail fast when none are online.'
 author: 'imShakil'
 
 inputs:

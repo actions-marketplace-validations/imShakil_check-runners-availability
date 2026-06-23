@@ -1,4 +1,4 @@
-# check-runners-availability
+# RunnerWatch
 
 A GitHub Action that checks whether any matching self-hosted runner is online
 and, by default, **cancels the workflow immediately** if none are. Use it at
@@ -59,7 +59,7 @@ organization (for `scope: org`):
 Store the token as a repository/organization secret and pass it explicitly:
 
 ```yaml
-- uses: imShakil/check-runners-availability@v1
+- uses: imShakil/RunnerWatch@v1
   with:
     token: ${{ secrets.RUNNER_CHECK_PAT }}
     labels: linux
@@ -78,7 +78,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: imShakil/check-runners-availability@v1
+      - uses: imShakil/RunnerWatch@v1
         with:
           token: ${{ secrets.RUNNER_CHECK_PAT }} # PAT with repo admin access — see Permissions
           labels: linux
@@ -102,7 +102,7 @@ jobs:
       available: ${{ steps.check.outputs.available }}
     steps:
       - id: check
-        uses: imShakil/check-runners-availability@v1
+        uses: imShakil/RunnerWatch@v1
         with:
           token: ${{ secrets.RUNNER_CHECK_PAT }} # PAT with admin:org scope — see Permissions
           scope: org
@@ -124,7 +124,7 @@ are registered against a separate "platform" repo. The token used here needs
 access to that target repo.
 
 ```yaml
-- uses: imShakil/check-runners-availability@v1
+- uses: imShakil/RunnerWatch@v1
   with:
     token: ${{ secrets.RUNNER_CHECK_PAT }} # PAT with admin access on the targeet repo 
     owner: my-org
