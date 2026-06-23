@@ -1,0 +1,121 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v1.0.0). Leave blank to dry-run.'
+        required: false
+        default: ''
+
+permissions:
+  contents: write   # needed to create releases and (optionally) push commits
+  actions: read     # only required if you later add GH_API calls
+
+jobs:
+  build:
+    name: Build & Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Fetch full history so we can tag / push back.
+          fetch-depth: 0
+          # Default ${{ github.token }} is fine for public repos. For private
+          # repos with branch protection, swap this for a PAT or use a
+          # dedicated bot account.
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Pull the version from the pushed tag. workflow_dispatch falls back
+          # to the input, then to the most recent v* tag, then to dry-run.
+          TAG="${GITHUB_REF_TYPE:-}"
+          if [[ "$TAG" == "tag" ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          elif [[ -n "${{ inputs.tag }}" ]]; then
+            VERSION="${{ inputs.tag }}"
+            VERSION="${VERSION#v}"
+          else
+            VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)"
+          fi
+
+          if [[ -z "${VERSION:-}" ]]; then
+            echo "::warning::No version resolved — running in dry-run mode."
+            VERSION="$(jq -r .version package.json)"
+            DRY_RUN="true"
+          else
+            DRY_RUN="false"
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "dry_run=$DRY_RUN"   >> "$GITHUB_OUTPUT"
+          echo "Resolved version: $VERSION (dry_run=$DRY_RUN)"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bump package.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          npm version --no-git-tag-version --allow-same-version "$VERSION"
+          echo "package.json is now at version $(jq -r .version package.json)"
+
+      - name: Build bundle
+        run: npm run build
+
+      - name: Smoke test dist/
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check dist/index.js
+          # Confirm the bundle exposes a top-level function reference so we
+          # know the entrypoint is intact.
+          node -e "const code = require('fs').readFileSync('dist/index.js','utf8'); if (!code.includes('module.exports')) { console.error('dist/index.js missing module.exports'); process.exit(1); }"
+          echo "dist/index.js smoke test passed."
+
+      - name: Commit bumped files back to the tag branch
+        if: steps.version.outputs.dry_run == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          BRANCH="${GITHUB_REF#refs/tags/}"
+          # Tags point at commits, so a normal push won't update the branch.
+          # Use the tag's ref directly to push the rebuilt dist/ + package.json.
+          git add package.json package-lock.json dist/
+          if git diff --cached --quiet; then
+            echo "No changes to commit — dist/ already matches the tag."
+            exit 0
+          fi
+          git commit -m "chore(release): rebuild dist/ for $BRANCH"
+          # Push back to the tag (this also updates the ref so the Release
+          # artifact below matches the committed source).
+          git push origin "HEAD:refs/tags/$BRANCH"
+
+      - name: Create GitHub Release
+        if: steps.version.outputs.dry_run == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            dist/index.js
