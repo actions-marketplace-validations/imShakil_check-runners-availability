@@ -16,11 +16,11 @@ inputs:
     required: false
     default: ''
   owner:
-    description: 'Repository owner (user or org). Only used when scope=repo. Defaults to the owner of the current repo (${{ github.repository_owner }}).'
+    description: 'Repository owner (user or org). Only used when scope=repo. Leave empty to default to the owner of the repo running the workflow.'
     required: false
     default: ''
   repo:
-    description: 'Repository name. Only used when scope=repo. Defaults to the current repo (${{ github.event.repository.name }}). Override this when checking runners on a different repository than the one running the workflow.'
+    description: 'Repository name. Only used when scope=repo. Leave empty to default to the repo running the workflow. Override this when checking runners on a different repository.'
     required: false
     default: ''
   labels:
@@ -36,9 +36,9 @@ inputs:
     required: false
     default: 'true'
   github-server-url:
-    description: 'GitHub server URL, e.g. https://github.example.com for GHES. Defaults to ${{ github.server_url }}.'
+    description: 'GitHub server URL, e.g. https://github.example.com for GHES. Leave empty to use the GITHUB_SERVER_URL exposed to the workflow (falls back to https://api.github.com).'
     required: false
-    default: ${{ github.server_url }}
+    default: ''
 
 outputs:
   available:
