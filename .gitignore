@@ -219,3 +219,4 @@ __marimo__/
 .streamlit/secrets.toml
 .puku/
 **/node_modules
+**/.DS_Store
